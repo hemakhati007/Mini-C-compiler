@@ -1,4 +1,7 @@
-let compileLexer, compileAST, compileIR, compileOptimizedIR, compileCodegen;
+let compileLexer, compileAST, compileIR, compileOptimizedIR, compileCodegen,runCodegen;
+
+
+
 
 function showStats(stage, timeMs = 0, success = true) {
   document.getElementById("status").textContent = `Status: ✅ ${stage} completed`;
@@ -9,14 +12,16 @@ function showStats(stage, timeMs = 0, success = true) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  createClangModule().then((Module) => {
+
+  Module().then((Module) => {
     console.log("WASM loaded");
+   
 
     const runLexer = Module.cwrap('run_lexer', 'string', ['string']);
     const runAST = Module.cwrap('run_ast', 'string', ['string']);
     const runIR = Module.cwrap('run_ir', 'string', ['string']);
     const runOptimizedIR = Module.cwrap('run_optimized_ir', 'string', ['string']);
-    const runCodegen = Module.cwrap('run_codegen', 'string', ['string']);
+    // const runCodegen = Module.cwrap('run_codegen', 'string', ['string']);
 
     compileLexer = () => {
       const code = document.getElementById("codeInput").value;
@@ -53,27 +58,69 @@ document.addEventListener("DOMContentLoaded", () => {
       const start = performance.now();
       const ir = runIR(code);
       const optimized = runOptimizedIR(ir);
+      //we got optmizrd ir now we want it to be convert to assambly
       const time = performance.now() - start;
 
       document.getElementById("output").textContent = optimized;
       showStats("Optimized IR Generation", time);
     };
 
-    compileCodegen = () => {
+
+    const compileBtn = document.getElementById("compileBtn");
+    compileBtn.onclick = async (event) => {
+      console.log("Compile button clicked");
+      event.preventDefault(); // just in case, won't hurt
+      await compileCodegen();
+      console.log("compileCodegen finished");
+    };
+
+    async function runCodegen(ir) {
+      try {
+        const response = await fetch('http://localhost:3000/compile-ir', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ir })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const result = await response.json();
+        if (result.asm) {
+          const formattedAsm = result.asm
+            .replace(/\\t/g, '\t')
+            .replace(/\\r\\n|\\n|\\r/g, '\n');
+
+          return formattedAsm;
+        } else {
+          return `Error: ${result.error}`;
+        }
+      } catch (error) {
+        return `Error: ${error.message}`;
+      }
+    };
+    compileCodegen = async () => {
       const code = document.getElementById("codeInput").value;
       const start = performance.now();
       const ir = runIR(code);  // always regenerate IR for consistency
       const optimized = runOptimizedIR(ir);
-      const output = runCodegen(optimized);
+      const output = await runCodegen(optimized);
       const time = performance.now() - start;
 
-      document.getElementById("outputWASM").textContent = output;
+      document.getElementById("output").textContent = output;
+
+      // document.getElementById("outputWASM").textContent = output;
 
       const success = !output.includes("error") && output.includes("Execution result");
+
       showStats("Code Execution", time, success);
     };
-  });
-});
+
+    
+  }
+  ); 
+}
+);
 function toggleTheme() {
   const style = document.getElementById("themeStyle");
   const isDark = style.innerHTML.includes("background-color: #121212");

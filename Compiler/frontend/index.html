@@ -70,8 +70,8 @@
   <button onclick="compileAST()">Run AST</button>
   <button onclick="compileIR()">Generate IR</button>
   <button onclick="compileOptimizedIR()">Optimized IR</button>
-  <button onclick="compileCodegen()">Generate WebAssembly</button>
-
+  <button type="button" id="compileBtn" onclick="compileCodegen()">Generate WebAssembly</button>
+<!-- onclick="compileCodegen()" -->
   <div class="container">
     <div class="output-section">
       <h4>Compilation Output</h4>
@@ -89,7 +89,7 @@
     </div>
   </div>
 
-  <script src="clang-llvm-lld.js"></script>
+  <script src="compiler.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

@@ -13,7 +13,11 @@
 	.align	16, 0x90
 _main:                                  # @main
 # BB#0:
-	movl	$42, %eax
+	subl	$12, %esp
+	movl	$10, 8(%esp)
+	movl	$10, 4(%esp)
+	xorl	%eax, %eax
+	addl	$12, %esp
 	ret
 
 
