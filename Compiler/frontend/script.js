@@ -125,7 +125,7 @@ async function generateCodeFromPrompt(prompt) {
   const response = await fetch("https://api.together.ai/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": "Bearer tgp_v1_OYf0AAf6l347yHElz_bF1DgRl2NWzktUdJGazWruEw8",
+      "Authorization": "Bearer your api key",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
