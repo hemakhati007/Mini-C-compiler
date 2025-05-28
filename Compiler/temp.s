@@ -14,8 +14,6 @@
 _main:                                  # @main
 # BB#0:
 	subl	$12, %esp
-	movl	$10, 8(%esp)
-	movl	$10, 4(%esp)
 	xorl	%eax, %eax
 	addl	$12, %esp
 	ret

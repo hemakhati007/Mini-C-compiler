@@ -7,6 +7,7 @@
 #include <emscripten/emscripten.h>
 #include <cstdio>
 #include <unordered_map>
+#include <iomanip>  // for std::setprecision, std::fixed
 
 std::unordered_map<std::string, std::string> globalSymbolTable;
 std::vector<std::string> semanticErrors;
@@ -38,21 +39,48 @@ std::string removeComments(const std::string& code) {
 std::vector<Token> tokenizeStructured(const std::string& input) {
     std::string clean = removeComments(input);
     std::vector<Token> tokens;
-    std::regex pattern(R"(\s+|==|!=|<=|>=|[+\-*/=<>(){};]|[0-9]+|[a-zA-Z_][a-zA-Z0-9_]*)");
-    std::map<std::string, std::string> keywords = {{"int", "KEYWORD"}, {"return", "KEYWORD"}};
+
+    // Match patterns: whitespace, float literals, char literals, multi-char symbols, integers, identifiers, single-char symbols
+    std::regex pattern(R"(\s+|==|!=|<=|>=|[+\-*/=<>(){};]|'[^']'|\d+\.\d+|\d+|[a-zA-Z_][a-zA-Z0-9_]*)");
+
+    std::map<std::string, std::string> keywords = {
+        {"int", "KEYWORD"},
+        {"float", "KEYWORD"},
+        {"char", "KEYWORD"},
+        {"return", "KEYWORD"},
+        {"if", "KEYWORD"},
+        {"else", "KEYWORD"},
+        {"while", "KEYWORD"},
+        {"for", "KEYWORD"}
+    };
 
     for (auto it = std::sregex_iterator(clean.begin(), clean.end(), pattern); it != std::sregex_iterator(); ++it) {
         std::string tok = (*it).str();
+
+        // Skip whitespace
         if (std::regex_match(tok, std::regex(R"(\s+)"))) continue;
 
-        std::string type = (keywords.count(tok)) ? keywords[tok]
-                          : (std::regex_match(tok, std::regex(R"([0-9]+)"))) ? "INTEGER"
-                          : (std::regex_match(tok, std::regex(R"([a-zA-Z_][a-zA-Z0-9_]*)"))) ? "IDENTIFIER"
-                          : "SYMBOL";
+        std::string type;
+        if (keywords.count(tok)) {
+            type = keywords[tok];
+        } else if (std::regex_match(tok, std::regex(R"(\d+\.\d+)"))) {
+            type = "FLOAT";
+        } else if (std::regex_match(tok, std::regex(R"(\d+)"))) {
+            type = "INTEGER";
+        } else if (std::regex_match(tok, std::regex(R"('([^']|\\')')"))) {
+            type = "CHAR";
+        } else if (std::regex_match(tok, std::regex(R"([a-zA-Z_][a-zA-Z0-9_]*)"))) {
+            type = "IDENTIFIER";
+        } else {
+            type = "SYMBOL";
+        }
+
         tokens.push_back({type, tok});
     }
+
     return tokens;
 }
+
 
 std::string serializeTokens(const std::vector<Token>& tokens) {
     std::stringstream ss;
@@ -171,7 +199,10 @@ ASTNode* parseVarDecl() {
     if (!(peek().value == "int" || peek().value == "float" || peek().value == "char")) return nullptr;
 
     Token typeTok = advance(); // int, float, char
+    std:: cout<<typeTok.value;
     Token nameTok = advance();
+    std::cout<<nameTok.value;
+
 
     if (nameTok.type != "IDENTIFIER") return nullptr;
 
@@ -304,34 +335,137 @@ std::string getNodeType(ASTNode* node) {
 }
 
 
+// void analyzeSemantics(ASTNode* node) {
+//     if (!node) return;
+
+//     if (node->type == "VarDecl") {
+//         std::string varName = node->value;
+//         std::string varType = node->children[0]->value; // First child = type
+
+//         if (globalSymbolTable.count(varName)>1) {
+//             semanticErrors.push_back("Variable '" + varName + "' re-declared.");
+//         } else {
+//             globalSymbolTable[varName] = varType;
+//         }
+//     }
+
+//     else if (node->type == "Identifier") {
+//         if (globalSymbolTable.count(node->value)<1) {
+//             semanticErrors.push_back("Undeclared variable: " + node->value);
+//         }
+//     }
+
+//     else if (node->type == "BinaryOp") {
+//         ASTNode* left = node->children[0];
+//         ASTNode* right = node->children[1];
+
+//         analyzeSemantics(left);
+//         analyzeSemantics(right);
+
+//         // Optional: Check type compatibility
+//         std::string leftType = getNodeType(left);
+//         std::string rightType = getNodeType(right);
+//         if (leftType != rightType) {
+//             semanticErrors.push_back("Type mismatch in binary operation: " + leftType + " vs " + rightType);
+//         }
+//     }
+
+//     else if (node->type == "Assignment") {
+//         std::string varName = node->value;
+//         if (globalSymbolTable.count(varName)==0) {
+//             semanticErrors.push_back("Assignment to undeclared variable: " + varName);
+//         } else {
+//             ASTNode* expr = node->children[0];
+//             analyzeSemantics(expr);
+//             // parseExpression(expr);
+
+//             std::string expected = globalSymbolTable[varName];
+//             std::string actual = getNodeType(expr);
+//             if (expected != actual) {
+//                 semanticErrors.push_back("Type mismatch in assignment to '" + varName + "': expected " + expected + ", got " + actual);
+//             }
+//         }
+        
+//         // Assuming Assignment node has 2 children: [lhs, rhs]
+
+//     // ASTNode* lhs = node->children[0]; // variable (identifier)
+//     // ASTNode* rhs = node->children[1]; // expression
+
+//     // if (lhs->type != "Identifier") {
+//     //     semanticErrors.push_back("Invalid assignment target");
+//     //     return;
+//     // }
+
+//     // std::string varName = lhs->value;
+//     // if (globalSymbolTable.count(varName) == 0) {
+//     //     semanticErrors.push_back("Assignment to undeclared variable: " + varName);
+//     // } else {
+//     //     analyzeSemantics(rhs); // analyze the expression
+
+//     //     std::string expected = globalSymbolTable[varName];
+//     //     std::string actual = getNodeType(rhs);
+//     //     if (expected != actual) {
+//     //         semanticErrors.push_back("Type mismatch in assignment to '" + varName + "': expected " + expected + ", got " + actual);
+//     //     }
+//     // }
+//     }
+
+//     else if (node->type == "Function") {
+//         std::string funcName = node->value;
+//         if (funcName != "main" && funcName != "add" && funcName != "sub") {
+//             semanticErrors.push_back("Function not defined: " + funcName);
+//         }
+//     }
+
+//     // Recurse on children
+//     for (ASTNode* child : node->children) {
+//         analyzeSemantics(child);
+//     }
+// }
+
 void analyzeSemantics(ASTNode* node) {
     if (!node) return;
 
     if (node->type == "VarDecl") {
-        std::string varName = node->value;
-        std::string varType = node->children[0]->value; // First child = type
+        // Expect children: [Type, Name, OptionalInitializer]
+        if (node->children.size() < 2) return;
 
-        if (globalSymbolTable.count(varName)>1) {
+        std::string varType = node->children[0]->value;  // Type node
+        std::string varName = node->children[1]->value;  // Name node
+
+        if (globalSymbolTable.count(varName)) {
             semanticErrors.push_back("Variable '" + varName + "' re-declared.");
         } else {
             globalSymbolTable[varName] = varType;
         }
+
+        // Analyze initializer if it exists
+        if (node->children.size() > 2) {
+            ASTNode* expr = node->children[2];
+            analyzeSemantics(expr);
+
+            std::string exprType = getNodeType(expr);
+            if (exprType != varType) {
+                semanticErrors.push_back("Type mismatch in initialization of '" + varName + "': expected " + varType + ", got " + exprType);
+            }
+        }
     }
 
     else if (node->type == "Identifier") {
-        if (!globalSymbolTable.count(node->value)) {
+        if (globalSymbolTable.count(node->value) == 0) {
             semanticErrors.push_back("Undeclared variable: " + node->value);
         }
     }
 
     else if (node->type == "BinaryOp") {
+        if (node->children.size() < 2) return;
+
         ASTNode* left = node->children[0];
         ASTNode* right = node->children[1];
 
         analyzeSemantics(left);
         analyzeSemantics(right);
 
-        // Optional: Check type compatibility
         std::string leftType = getNodeType(left);
         std::string rightType = getNodeType(right);
         if (leftType != rightType) {
@@ -341,12 +475,11 @@ void analyzeSemantics(ASTNode* node) {
 
     else if (node->type == "Assignment") {
         std::string varName = node->value;
-        if (globalSymbolTable.count(varName)==0) {
+        if (globalSymbolTable.count(varName) == 0) {
             semanticErrors.push_back("Assignment to undeclared variable: " + varName);
         } else {
             ASTNode* expr = node->children[0];
             analyzeSemantics(expr);
-            // parseExpression(expr);
 
             std::string expected = globalSymbolTable[varName];
             std::string actual = getNodeType(expr);
@@ -354,32 +487,9 @@ void analyzeSemantics(ASTNode* node) {
                 semanticErrors.push_back("Type mismatch in assignment to '" + varName + "': expected " + expected + ", got " + actual);
             }
         }
-        
-        // Assuming Assignment node has 2 children: [lhs, rhs]
-
-    // ASTNode* lhs = node->children[0]; // variable (identifier)
-    // ASTNode* rhs = node->children[1]; // expression
-
-    // if (lhs->type != "Identifier") {
-    //     semanticErrors.push_back("Invalid assignment target");
-    //     return;
-    // }
-
-    // std::string varName = lhs->value;
-    // if (globalSymbolTable.count(varName) == 0) {
-    //     semanticErrors.push_back("Assignment to undeclared variable: " + varName);
-    // } else {
-    //     analyzeSemantics(rhs); // analyze the expression
-
-    //     std::string expected = globalSymbolTable[varName];
-    //     std::string actual = getNodeType(rhs);
-    //     if (expected != actual) {
-    //         semanticErrors.push_back("Type mismatch in assignment to '" + varName + "': expected " + expected + ", got " + actual);
-    //     }
-    // }
     }
 
-    else if (node->type == "Call") {
+    else if (node->type == "Function") {
         std::string funcName = node->value;
         if (funcName != "main" && funcName != "add" && funcName != "sub") {
             semanticErrors.push_back("Function not defined: " + funcName);
@@ -391,6 +501,8 @@ void analyzeSemantics(ASTNode* node) {
         analyzeSemantics(child);
     }
 }
+
+
 
 
 std::string printASTTree(ASTNode* node, int indent = 0) {
@@ -415,6 +527,48 @@ std::string printASTTree(ASTNode* node, int indent = 0) {
     return ss.str();
 }
 
+std::unordered_map<std::string, int> runtimeValues;
+
+int evaluate(ASTNode* node) {
+    if (!node) return 0;
+
+    if (node->type == "Literal") {
+        return std::stoi(node->value);
+    }
+
+    if (node->type == "Identifier") {
+        return runtimeValues[node->value];  // assume declared and initialized
+    }
+
+    if (node->type == "BinaryOp") {
+        int left = evaluate(node->children[0]);
+        int right = evaluate(node->children[1]);
+        std::string op = node->value;
+        if (op == "+") return left + right;
+        if (op == "-") return left - right;
+        if (op == "*") return left * right;
+        if (op == "/") return right != 0 ? left / right : 0;
+    }
+
+    return 0;
+}
+
+void execute(ASTNode* node) {
+    if (!node) return;
+
+    if (node->type == "VarDecl") {
+        std::string varName = node->children[1]->value;
+        if (node->children.size() > 2) {
+            int val = evaluate(node->children[2]);
+            runtimeValues[varName] = val;
+        }
+    }
+
+    for (ASTNode* child : node->children) {
+        execute(child);
+    }
+}
+
 
 std::string generateAST(const std::string& input) {
     tokens = tokenizeStructured(input);
@@ -434,6 +588,11 @@ std::string generateAST(const std::string& input) {
 
     // Perform semantic analysis
     analyzeSemantics(root);
+
+    if (semanticErrors.empty()) {
+        execute(root);              // Runtime simulation
+        std::cout << "Value of c: " << runtimeValues["c"] << std::endl; // should output 30
+    }
 
     // Creates a string stream ss, which is used to build a multi-line string output. It works like std::cout, but writes to a string buffer.
 
@@ -455,53 +614,80 @@ std::string generateAST(const std::string& input) {
 
 
 
-// Helper function to recursively generate IR for expressions
-std::string generateIRForExpr(ASTNode* expr, std::stringstream& ir, std::map<std::string, std::string>& varRegs, int& regCount) {
-    if (expr->type == "Literal") {
-        return expr->value;  // literal constant
-    } 
-    else if (expr->type == "Identifier") {
-        // Load variable value
-        std::string reg = "%" + std::to_string(regCount++);
-        ir << "  " << reg << " = load i32, i32* %" << expr->value << "\n";
-        return reg;
-    }
-    else if (expr->type == "BinaryOp") {
-        // Children: left, operator (value), right
-        ASTNode* left = expr->children[0];
-        ASTNode* right = expr->children[1];
-        std::string op = expr->value;  // e.g. "+", "-", "*", "/"
-
-        std::string leftReg = generateIRForExpr(left, ir, varRegs, regCount);
-        std::string rightReg = generateIRForExpr(right, ir, varRegs, regCount);
-
-        std::string reg = "%" + std::to_string(regCount++);
-
-        if (op == "+") ir << "  " << reg << " = add i32 " << leftReg << ", " << rightReg << "\n";
-        else if (op == "-") ir << "  " << reg << " = sub i32 " << leftReg << ", " << rightReg << "\n";
-        else if (op == "*") ir << "  " << reg << " = mul i32 " << leftReg << ", " << rightReg << "\n";
-        else if (op == "/") ir << "  " << reg << " = sdiv i32 " << leftReg << ", " << rightReg << "\n";
-
-        return reg;
-    }
-    else if (expr->type == "Call") {
-        // For now, just simple function call with integer args
-        std::string reg = "%" + std::to_string(regCount++);
-        ir << "  " << reg << " = call i32 @" << expr->value << "(";
-        for (size_t i = 0; i < expr->children.size(); ++i) {
-            if (i > 0) ir << ", ";
-            std::string argReg = generateIRForExpr(expr->children[i], ir, varRegs, regCount);
-            ir << "i32 " << argReg;
-        }
-        ir << ")\n";
-        return reg;
-    }
-
-    // fallback: return 0
-    return "0";
+std::string sanitizeVarName(const std::string& name) {
+    std::string clean = name;
+    clean.erase(std::remove_if(clean.begin(), clean.end(), ::isspace), clean.end());
+    return clean;
 }
 
+// Helper function to recursively generate IR for expressions
+std::string generateIRForExpr(ASTNode* expr, std::stringstream& ir,
+    std::map<std::string, std::string>& varRegs, int& regCount,
+    const std::map<std::string, std::string>& varTypes) {
 
+    if (expr->type == "Literal") {
+        // Check if the literal is a float (contains '.')
+        if (expr->value.find('.') != std::string::npos) {
+            float floatVal = std::stof(expr->value);
+            std::ostringstream formatted;
+            formatted << std::scientific << std::setprecision(6) << floatVal;
+            return formatted.str();
+        }
+        else {
+            // Handle char literal (single character string)
+            if (expr->value.size() == 1 && !isdigit(expr->value[0])) {
+                // Convert char to ASCII integer
+                int asciiVal = static_cast<int>(expr->value[0]);
+                return std::to_string(asciiVal);
+            }
+            // Otherwise, treat as integer literal
+            return expr->value;
+        }
+    }
+
+    else if (expr->type == "Identifier") {
+        std::string varName = expr->value;
+        std::string llvmType = varTypes.at(varName);
+
+        std::string cleanVar = sanitizeVarName(varName);
+        std::string reg = "%" + std::to_string(regCount++);
+        ir << "  " << reg << " = load " << llvmType << ", " << llvmType << "* %" << cleanVar << "\n";
+        return reg;
+    }
+
+    else if (expr->type == "BinaryOp") {
+        ASTNode* left = expr->children[0];
+        ASTNode* right = expr->children[1];
+
+        std::string leftReg = generateIRForExpr(left, ir, varRegs, regCount, varTypes);
+        std::string rightReg = generateIRForExpr(right, ir, varRegs, regCount, varTypes);
+
+        // Infer type from one of the operands (you can improve this by checking both)
+        std::string inferredType;
+        if (left->type == "Identifier") inferredType = varTypes.at(left->value);
+        else if (right->type == "Identifier") inferredType = varTypes.at(right->value);
+        else if (left->type == "Literal" && left->value.find('.') != std::string::npos)
+            inferredType = "float";
+        else
+            inferredType = "i32";
+
+        std::string reg = "%" + std::to_string(regCount++);
+        std::string op = expr->value;
+
+        std::string llvmOp;
+        if (op == "+") llvmOp = (inferredType == "float") ? "fadd" : "add";
+        else if (op == "-") llvmOp = (inferredType == "float") ? "fsub" : "sub";
+        else if (op == "*") llvmOp = (inferredType == "float") ? "fmul" : "mul";
+        else if (op == "/") llvmOp = (inferredType == "float") ? "fdiv" : "sdiv";
+        else llvmOp = (inferredType == "float") ? "fadd" : "add";
+
+        ir << "  " << reg << " = " << llvmOp << " " << inferredType << " " << leftReg << ", " << rightReg << "\n";
+        return reg;
+    }
+
+    // fallback
+    return "0";
+}
 
 
 std::string generateIR(ASTNode* root) {
@@ -513,7 +699,6 @@ std::string generateIR(ASTNode* root) {
             ir << "define i32 @" << fname << "() {\n";
 
             ASTNode* block = nullptr;
-            // Find the Block node child (should be at index 1 based on parseFunction)
             for (auto* c : child->children) {
                 if (c->type == "Block") {
                     block = c;
@@ -522,33 +707,47 @@ std::string generateIR(ASTNode* root) {
             }
 
             if (!block) {
-                ir << "  ret i32 0\n";  // fallback
+                ir << "  ret i32 0\n";
                 ir << "}\n";
                 continue;
             }
 
-            // We'll keep track of variable names and registers for simple IR
-            std::map<std::string, std::string> varRegs;
+            std::map<std::string, std::string> varRegs;    // variable to current register holding its value
+            std::map<std::string, std::string> varTypes;   // variable to LLVM type: i32, float, i8
             int regCount = 1;
 
             for (auto* stmt : block->children) {
                 if (stmt->type == "VarDecl") {
-                    // varDecl children: [Type, Name, optional Expression]
+                    // VarDecl children: [Type, Name, optional Expr]
+                    std::string varTypeStr = stmt->children[0]->value;  // "int", "float", "char"
                     std::string varName = stmt->children[1]->value;
-                    ir << "  %" << varName << " = alloca i32\n";
 
+                    std::string llvmType;
+                    if (varTypeStr == "int") llvmType = "i32";
+                    else if (varTypeStr == "float") llvmType = "float";
+                    else if (varTypeStr == "char") llvmType = "i8";
+                    else llvmType = "i32"; // default fallback
+
+                    varTypes[varName] = llvmType;
+
+                    // Allocate variable
+                    // ir << "  %" << varName << " = alloca " << llvmType << "\n";
+                    ir << "  %" << sanitizeVarName(varName) << " = alloca " << llvmType << "\n";
+
+
+                    // Initialization if present
                     if (stmt->children.size() == 3) {
-                        // has initializer expression
                         ASTNode* expr = stmt->children[2];
-
-                        std::string exprReg = generateIRForExpr(expr, ir, varRegs, regCount);
-                        ir << "  store i32 " << exprReg << ", i32* %" << varName << "\n";
+                        std::string exprReg = generateIRForExpr(expr, ir, varRegs, regCount, varTypes);
+                        
+                        // Store the expr result into variable
+                        ir << "  store " << llvmType << " " << exprReg << ", " << llvmType << "* %" <<  sanitizeVarName(varName) << "\n";
                     }
                 }
                 else if (stmt->type == "Return") {
                     ASTNode* retVal = stmt->children[0];
-                    std::string retReg = generateIRForExpr(retVal, ir, varRegs, regCount);
-                    ir << "  ret i32 " << retReg << "\n";
+                    std::string retReg = generateIRForExpr(retVal, ir, varRegs, regCount, varTypes);
+                    ir << "  ret i32 " << retReg << "\n"; // Assuming function returns int; for float functions you need to adapt.
                 }
             }
 
