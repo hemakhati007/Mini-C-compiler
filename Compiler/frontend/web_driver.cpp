@@ -533,6 +533,15 @@ int evaluate(ASTNode* node) {
     if (!node) return 0;
 
     if (node->type == "Literal") {
+        // Check if it's a char literal: e.g., 'A'
+        if (node->value.size() == 3 && node->value.front() == '\'' && node->value.back() == '\'') {
+            // Extract the character between single quotes
+            return static_cast<int>(node->value[1]);
+        }
+        // Existing float and int handling
+        if (node->value.find('.') != std::string::npos) {
+            return static_cast<int>(std::stof(node->value)); // crude float-to-int
+        }
         return std::stoi(node->value);
     }
 
