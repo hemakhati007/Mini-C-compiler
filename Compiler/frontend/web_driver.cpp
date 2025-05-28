@@ -335,93 +335,7 @@ std::string getNodeType(ASTNode* node) {
 }
 
 
-// void analyzeSemantics(ASTNode* node) {
-//     if (!node) return;
 
-//     if (node->type == "VarDecl") {
-//         std::string varName = node->value;
-//         std::string varType = node->children[0]->value; // First child = type
-
-//         if (globalSymbolTable.count(varName)>1) {
-//             semanticErrors.push_back("Variable '" + varName + "' re-declared.");
-//         } else {
-//             globalSymbolTable[varName] = varType;
-//         }
-//     }
-
-//     else if (node->type == "Identifier") {
-//         if (globalSymbolTable.count(node->value)<1) {
-//             semanticErrors.push_back("Undeclared variable: " + node->value);
-//         }
-//     }
-
-//     else if (node->type == "BinaryOp") {
-//         ASTNode* left = node->children[0];
-//         ASTNode* right = node->children[1];
-
-//         analyzeSemantics(left);
-//         analyzeSemantics(right);
-
-//         // Optional: Check type compatibility
-//         std::string leftType = getNodeType(left);
-//         std::string rightType = getNodeType(right);
-//         if (leftType != rightType) {
-//             semanticErrors.push_back("Type mismatch in binary operation: " + leftType + " vs " + rightType);
-//         }
-//     }
-
-//     else if (node->type == "Assignment") {
-//         std::string varName = node->value;
-//         if (globalSymbolTable.count(varName)==0) {
-//             semanticErrors.push_back("Assignment to undeclared variable: " + varName);
-//         } else {
-//             ASTNode* expr = node->children[0];
-//             analyzeSemantics(expr);
-//             // parseExpression(expr);
-
-//             std::string expected = globalSymbolTable[varName];
-//             std::string actual = getNodeType(expr);
-//             if (expected != actual) {
-//                 semanticErrors.push_back("Type mismatch in assignment to '" + varName + "': expected " + expected + ", got " + actual);
-//             }
-//         }
-        
-//         // Assuming Assignment node has 2 children: [lhs, rhs]
-
-//     // ASTNode* lhs = node->children[0]; // variable (identifier)
-//     // ASTNode* rhs = node->children[1]; // expression
-
-//     // if (lhs->type != "Identifier") {
-//     //     semanticErrors.push_back("Invalid assignment target");
-//     //     return;
-//     // }
-
-//     // std::string varName = lhs->value;
-//     // if (globalSymbolTable.count(varName) == 0) {
-//     //     semanticErrors.push_back("Assignment to undeclared variable: " + varName);
-//     // } else {
-//     //     analyzeSemantics(rhs); // analyze the expression
-
-//     //     std::string expected = globalSymbolTable[varName];
-//     //     std::string actual = getNodeType(rhs);
-//     //     if (expected != actual) {
-//     //         semanticErrors.push_back("Type mismatch in assignment to '" + varName + "': expected " + expected + ", got " + actual);
-//     //     }
-//     // }
-//     }
-
-//     else if (node->type == "Function") {
-//         std::string funcName = node->value;
-//         if (funcName != "main" && funcName != "add" && funcName != "sub") {
-//             semanticErrors.push_back("Function not defined: " + funcName);
-//         }
-//     }
-
-//     // Recurse on children
-//     for (ASTNode* child : node->children) {
-//         analyzeSemantics(child);
-//     }
-// }
 
 void analyzeSemantics(ASTNode* node) {
     if (!node) return;
@@ -812,7 +726,7 @@ const char* run_ir(const char* input) {
    
 }
 
-
+///
    EMSCRIPTEN_KEEPALIVE
 const char* run_optimized_ir(const char* inputIR) {
     static std::string optimized;
