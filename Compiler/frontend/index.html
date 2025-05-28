@@ -2,24 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini C Compiler</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/monaco-editor@latest/min/vs/loader.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini C Compiler with AI Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
 </head>
 <body>
   <h1>Mini C Compiler</h1>
-
   <button id="themeToggle" onclick="toggleTheme()">Toggle Theme</button>
-  <button id="micButton">🎤 Voice Prompt</button>
-
-  <div id="editor" style="height: 300px; border: 1px solid #ccc;"></div>
-
   <button onclick="compileLexer()">Run Lexer</button>
   <button onclick="compileAST()">Run AST</button>
   <button onclick="compileIR()">Generate IR</button>
   <button onclick="compileOptimizedIR()">Optimized IR</button>
-  <button type="button" id="compileBtn">Generate WebAssembly</button>
+  <button id="compileBtn">Generate WebAssembly</button>
+  <button id="voiceAssistantBtn">🎤 Ask AI</button>
+
+  <div id="editor" style="height: 300px; width: 100%; margin-top: 1rem;"></div>
 
   <div class="container">
     <div class="output-section">
