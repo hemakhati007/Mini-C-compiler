@@ -1,0 +1,53 @@
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #121212;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 2rem;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+#editor, pre {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #1e1e1e;
+  color: #fff;
+  font-family: monospace;
+  font-size: 1rem;
+}
+
+button {
+  margin-top: 1rem;
+  margin-right: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background: #03dac6;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+}
+
+.output-section h4 {
+  margin-bottom: 0.5rem;
+  color: #bb86fc;
+}
+
+.result-stats {
+  margin-top: 1rem;
+  background-color: #212121;
+  padding: 1rem;
+  border-left: 4px solid #03dac6;
+  border-radius: 6px;
+}
+
+.result-stats p {
+  margin: 0.4rem 0;
+}

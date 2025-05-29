@@ -1,5 +1,5 @@
 let compileLexer, compileAST, compileIR, compileOptimizedIR, compileCodegen,runCodegen;
-
+let editor;
 
 
 
@@ -12,7 +12,15 @@ function showStats(stage, timeMs = 0, success = true) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-
+  require.config({ paths: { vs: "https://unpkg.com/monaco-editor@latest/min/vs" } });
+  require(["vs/editor/editor.main"], () => {
+    editor = monaco.editor.create(document.getElementById("editor"), {
+      value: "// Sample C code\nint main() { return 42; }",
+      language: "c",
+      theme: "vs-dark",
+      automaticLayout: true,
+    });
+  });
   Module().then((Module) => {
     console.log("WASM loaded");
    
@@ -121,123 +129,61 @@ document.addEventListener("DOMContentLoaded", () => {
   ); 
 }
 );
+// Voice Assistant Logic
+  const micButton = document.getElementById("micButton");
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+
+    micButton.onclick = () => {
+      recognition.start();
+      micButton.textContent = "🎙️ Listening...";
+    };
+
+    recognition.onresult = async (event) => {
+      micButton.textContent = "🎤 Voice Prompt";
+      const prompt = event.results[0][0].transcript;
+      console.log("Prompt:", prompt);
+
+      const aiResponse = await fetch("https://api.together.xyz/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer  tgp_v1_8lk3sb6ZQ6IjNwWwXMKj-qGCwMWiECxBh9OSgI9pcZU"
+        },
+        body: JSON.stringify({
+          model: "mistralai/Mixtral-8x7B-Instruct-v0.1",
+          prompt: `Write a C program for: ${prompt}`,
+          max_tokens: 300
+        })
+      });
+
+      const json = await aiResponse.json();
+      if (json.output) {
+        editor.setValue(json.output.trim());
+      } else {
+        alert("AI response failed: " + (json.error || "Unknown error"));
+      }
+    };
+
+    recognition.onerror = () => {
+      micButton.textContent = "🎤 Voice Prompt";
+      alert("Voice recognition failed. Please try again.");
+    };
+  } else {
+    micButton.disabled = true;
+    micButton.textContent = "🎤 Not Supported";
+  }
 function toggleTheme() {
   const style = document.getElementById("themeStyle");
   const isDark = style.innerHTML.includes("background-color: #121212");
 
   if (isDark) {
-    // Light theme
-    style.innerHTML = `
-      body {
-        font-family: 'Segoe UI', sans-serif;
-        background-color: #f9f9f9;
-        color: #111;
-        margin: 0;
-        padding: 2rem;
-      }
-
-      .container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-      }
-
-      textarea, pre {
-        width: 100%;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        background: #fff;
-        color: #000;
-        font-family: monospace;
-        font-size: 1rem;
-      }
-
-      button {
-        margin-top: 1rem;
-        margin-right: 0.5rem;
-        padding: 0.5rem 1rem;
-        font-size: 1rem;
-        cursor: pointer;
-        background: #6200ee;
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-      }
-
-      .output-section h4 {
-        margin-bottom: 0.5rem;
-        color: #6200ee;
-      }
-
-      .result-stats {
-        margin-top: 1rem;
-        background-color: #eeeeee;
-        padding: 1rem;
-        border-left: 4px solid #6200ee;
-        border-radius: 6px;
-      }
-
-      .result-stats p {
-        margin: 0.4rem 0;
-      }
-    `;
+    editor.updateOptions({ theme: "vs-light" });
   } else {
-    // Dark theme (reset to original)
-    style.innerHTML = `
-      body {
-        font-family: 'Segoe UI', sans-serif;
-        background-color: #121212;
-        color: #e0e0e0;
-        margin: 0;
-        padding: 2rem;
-      }
-
-      .container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-      }
-
-      textarea, pre {
-        width: 100%;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #333;
-        background: #1e1e1e;
-        color: #fff;
-        font-family: monospace;
-        font-size: 1rem;
-      }
-
-      button {
-        margin-top: 1rem;
-        margin-right: 0.5rem;
-        padding: 0.5rem 1rem;
-        font-size: 1rem;
-        cursor: pointer;
-        background: #03dac6;
-        color: #000;
-        border: none;
-        border-radius: 6px;
-      }
-
-      .output-section h4 {
-        margin-bottom: 0.5rem;
-        color: #bb86fc;
-      }
-
-      .result-stats {
-        margin-top: 1rem;
-        background-color: #212121;
-        padding: 1rem;
-        border-left: 4px solid #03dac6;
-        border-radius: 6px;
-      }
-
-      .result-stats p {
-        margin: 0.4rem 0;
-      }
-    `;
+    editor.updateOptions({ theme: "vs-dark" });
   }
 }
