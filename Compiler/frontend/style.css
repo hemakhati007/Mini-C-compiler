@@ -10,17 +10,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
-}
-
-#editor, pre {
-  width: 100%;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid #333;
-  background: #1e1e1e;
-  color: #fff;
-  font-family: monospace;
-  font-size: 1rem;
+  margin-top: 2rem;
 }
 
 button {
@@ -35,7 +25,8 @@ button {
   border-radius: 6px;
 }
 
-.output-section h4 {
+.output-section h4,
+.result-stats h4 {
   margin-bottom: 0.5rem;
   color: #bb86fc;
 }
@@ -50,4 +41,10 @@ button {
 
 .result-stats p {
   margin: 0.4rem 0;
+}
+
+#editor {
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #1e1e1e;
 }
